@@ -2,11 +2,11 @@
 Simple computer graphics animation using C++/OpenGL
 
 # Usage Guide:
-- git clone repository url.
-- open up the CMakeLists.txt using an IDE (eg. QtCreator).
-- run cmake file.
-- ensure working directory is the root directory of the repository or else images and other stuff will fail to load.
-- run project.
+- Git clone repository url.
+- Open up the CMakeLists.txt using an IDE (eg. QtCreator).
+- Run cmake file.
+- Ensure working directory is the root directory of the repository or else images and other stuff will fail to load.
+- Run project and enjoy.
 
 # Camera Controls:
 - HOME: Toggles between default view and spaceship view.
