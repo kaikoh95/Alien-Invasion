@@ -19,6 +19,8 @@ Simple computer graphics animation using C++/OpenGL
 
 # Interactive Controls:
 - C: Fires bullet from cannon.
-- S: Launches spaceship.
+- L: Launches spaceship.
+- S: Toggles snowfall.
 - W: Toggles creation of waterfall curtain.
 - R: Restarts launch of spaceship. (In case user somehow missed the animation)
+- ESC: Closes the application window.
