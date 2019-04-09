@@ -3,18 +3,25 @@
 #include <stdio.h>
 #include <GL/glut.h>
 #include <fstream>
+#include <math.h>
 #include "loadTGA.h"
 
 using namespace std;
 
-#define total_droplets 1000000
-#define gravity -0.1
+#define TOTAL_DROPLETS 1000000
+#define TOTAL_SNOW 10000
+#define GRAVITY -0.1
 
 GLUquadric *q;
 GLuint txId[9];
 
 int check = 0;
 int robots_move = 0;
+
+int loop;
+float decrease_speed = 2.0;
+float velocity = 0.0;
+float zoom = -40.0;
 
 int water_drops = 0;
 int create_curtain = 0;
@@ -198,6 +205,10 @@ void idle(void) {
     glutPostRedisplay();
 }
 
+/**
+ * @brief bullet_timer - timer to keep track of bullet animation
+ * @param time - for glutTimerFunc
+ */
 void bullet_timer(int time) {
 	glutPostRedisplay();
 
@@ -212,7 +223,11 @@ void bullet_timer(int time) {
     }
 }
 
-void spaceship_timer(int time1) {
+/**
+ * @brief spaceship_timer - timer for spaceship animation
+ * @param time - for glutTimerFunc
+ */
+void spaceship_timer(int time) {
     glutPostRedisplay();
 
     if (spaceship_move == 1 && spaceship_move_y < 1000) {
@@ -222,6 +237,10 @@ void spaceship_timer(int time1) {
 
 }
 
+/**
+ * @brief robot_timer - timer for robot animation
+ * @param time - for glutTimerFunc
+ */
 void robot_timer(int time) {
 	glutPostRedisplay();
     if (theta < 30 && check == 0) {
@@ -238,7 +257,12 @@ void robot_timer(int time) {
 	glutTimerFunc(20, robot_timer, 0);
 }
 
-
+/**
+ * @brief glut_key_pressed - special function to recognize keys pressed
+ * @param key - the key that was pressed
+ * @param x - for glutSpecialFunc
+ * @param y - for glutSpecialFunc
+ */
 void glut_key_pressed(int key, int x, int y) {
     if(key == GLUT_KEY_UP) {
         cam_height--;
@@ -268,6 +292,12 @@ void glut_key_pressed(int key, int x, int y) {
     glutPostRedisplay();
 }
 
+/**
+ * @brief key_pressed - recognized ASCII keys pressed
+ * @param key - key that was pressed
+ * @param x - for glutKeyboardFunc
+ * @param y - for glutKeyboardFunc
+ */
 void key_pressed(unsigned char key, int x, int y) {
     if (key == 'c' || key == 'C') {
         if (bullet_fire == 0) {
@@ -304,7 +334,7 @@ void key_pressed(unsigned char key, int x, int y) {
 }
 
 
-/// Waterfall Sprinkler (Particle System)
+/// Waterfall Sprinkler Structure (Particle System)
 typedef struct {
     int sprinkle;
     float x_coord, y_coord;
@@ -312,7 +342,79 @@ typedef struct {
     float mass;
 } Particle;
 
-Particle sprinkler[total_droplets];
+Particle sprinkler[TOTAL_DROPLETS];
+
+/// Snowfall (Particle System)
+typedef struct {
+    bool alive;
+    float lifespan;
+    float decay;
+
+    float x_pos;
+    float y_pos;
+    float z_pos;
+
+    float velocity;
+    float gravity;
+} Snow;
+
+Snow snowfall[TOTAL_SNOW];
+
+/**
+ * @brief init_snowfall - Initialize snowfall
+ * @param i
+ */
+void init_snowfall(int i) {
+    snowfall[i].alive = true;
+    snowfall[i].lifespan = 1.0;
+    snowfall[i].decay = float(rand() % 100) / 1000;
+
+    snowfall[i].x_pos = float(rand() % 1000) - 10;
+    snowfall[i].y_pos = float(rand() % 1000) - 10;
+    snowfall[i].z_pos = float(rand() % 1000) - 10;
+}
+
+/**
+ * @brief draw_snow - Displays snowfall
+ */
+void draw_snow() {
+  float x, y, z;
+  for (loop = 0; loop < TOTAL_SNOW; loop=loop+2) {
+    if (snowfall[loop].alive == true) {
+      x = snowfall[loop].x_pos;
+      y = snowfall[loop].y_pos;
+      z = snowfall[loop].z_pos + zoom;
+
+      // snow at castle front
+      glPushMatrix();
+          glColor3f(1.0, 1.0, 1.0);
+          glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, snowfall[loop].z_pos+zoom);
+          glutSolidSphere(1, 16, 16);
+      glPopMatrix();
+
+      // snow at castle back
+      glPushMatrix();
+          glColor3f(1.0, 1.0, 1.0);
+          glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, -(snowfall[loop].z_pos+zoom));
+          glutSolidSphere(1, 16, 16);
+      glPopMatrix();
+
+      // animate snow using physics of velocity and gravity
+      if ((snowfall[loop].y_pos + (velocity / (decrease_speed * 1000))) > 10) {
+          snowfall[loop].y_pos += velocity / (decrease_speed * 1000);
+          velocity += GRAVITY;
+          snowfall[loop].lifespan -= snowfall[loop].decay;
+      } else {
+          snowfall[loop].lifespan = 0;
+      }
+
+      // loop snowfall
+      if (snowfall[loop].lifespan <= 0.0) {
+        init_snowfall(loop);
+      }
+    }
+  }
+}
 
 /**
  * @brief time_step - function to animate sprinkler
@@ -321,13 +423,14 @@ void time_step(void) {
     int i;
     for (i=0; i<water_drops; i++) {
         if (sprinkler[i].sprinkle) {
-            if (sprinkler[i].y_coord + gravity * sprinkler[i].mass < -0.75 && create_curtain == 1) {
+            // physics of gravity
+            if (sprinkler[i].y_coord + GRAVITY * sprinkler[i].mass < -0.75 && create_curtain == 1) {
                 // create waterfall curtain
                 sprinkler[i].y_change = -sprinkler[i].y_change;
             }
             else {
                 // just sprinkle on to ground
-                sprinkler[i].y_change += gravity * sprinkler[i].mass;
+                sprinkler[i].y_change += GRAVITY * sprinkler[i].mass;
             }
             sprinkler[i].x_coord += sprinkler[i].x_change;
             sprinkler[i].y_coord += sprinkler[i].y_change;
@@ -344,8 +447,8 @@ void time_step(void) {
 void drop_generator(void) {
     int i;
     float new_droplets = randomize() * 100;
-    if (water_drops + new_droplets >= total_droplets) {
-        new_droplets = total_droplets - water_drops;
+    if (water_drops + new_droplets >= TOTAL_DROPLETS) {
+        new_droplets = TOTAL_DROPLETS - water_drops;
     }
     for (i=water_drops; i<water_drops+new_droplets; i++) {
         sprinkler[i].sprinkle = 1;
@@ -358,9 +461,12 @@ void drop_generator(void) {
     water_drops += new_droplets;
 }
 
+/**
+ * @brief draw_sprinkler - displays sprinkling of water droplets
+ */
 void draw_sprinkler(void) {
     int i;
-    glColor3f(0.0, 0.5, 1.0);
+    glColor3f(0, 0.4, 1);
     glBegin(GL_POINTS);
     for (i=0; i<water_drops; i++) {
         if (sprinkler[i].sprinkle) {
@@ -371,6 +477,9 @@ void draw_sprinkler(void) {
     glFlush();
 }
 
+/**
+ * @brief hydrant_base - water hydrant pillars
+ */
 void hydrant_base(void) {
     // left body
     glPushMatrix();
@@ -430,6 +539,9 @@ void hydrant_base(void) {
     glPopMatrix();
 }
 
+/**
+ * @brief top_wall - wall blocks to be placed on top of castle walls
+ */
 void top_wall(void) {
     glPushMatrix();
     glEnable(GL_TEXTURE_2D);
@@ -498,6 +610,9 @@ void top_wall(void) {
     glPopMatrix();
 }
 
+/**
+ * @brief wall - castle walls
+ */
 void wall(void) {
     glPushMatrix();
     glEnable(GL_TEXTURE_2D);
@@ -576,6 +691,9 @@ void wall(void) {
     glPopMatrix();
 }
 
+/**
+ * @brief short_wall - castle top wall blocks
+ */
 void short_wall(void) {
     glPushMatrix();
     glEnable(GL_TEXTURE_2D);
@@ -653,6 +771,9 @@ void short_wall(void) {
     glPopMatrix();
 }
 
+/**
+ * @brief castle_back - back pillars of castle
+ */
 void castle_back(void) {
     glPushMatrix();
         glColor3f(0., 0., 0.);
@@ -668,6 +789,9 @@ void castle_back(void) {
     glPopMatrix();
 }
 
+/**
+ * @brief castle - front pillars and gate of castle
+ */
 void castle(void) {
     glPushMatrix();
         glColor3f(0.2, 0.2, 0.2);
@@ -758,8 +882,11 @@ void castle(void) {
     glPopMatrix();
 }
 
+/**
+ * @brief spaceship - Spaceship object
+ */
 void spaceship(void) {
-    // top
+    // top - surface shape generated using an equation
     GLdouble eqn [4]={0.0,1.0,0.0,0.0}; 
     glPushMatrix();
         glColor3f(0, 0, 0.4);
@@ -799,7 +926,7 @@ void spaceship(void) {
 }
 
 /**
- * @brief cannon - Cannon object to guard the castle
+ * @brief cannon - Cannon object
  */
 void cannon(void) {
     // base of cannon
@@ -823,7 +950,7 @@ void cannon(void) {
 }
 
 /**
- * @brief bullet - fires red-hot bullet
+ * @brief bullet - Bullet object
  */
 void bullet(void) {
     glPushMatrix();
@@ -971,6 +1098,10 @@ void robot_shadow(void) {
     glPopMatrix();
 }
 
+/**
+ * @brief robot_walking - animates robots
+ * @param check - 0 for stop animation, 1 for animate
+ */
 void robot_walking(int check) {
 
     if (check == 1) {
@@ -1025,12 +1156,17 @@ void robot_walking(int check) {
     }
 }
 
+/**
+ * @brief initialize - Init method for project
+ */
 void initialize(void) {
     float grey[4] = {0.4, 0.4, 0.4, 1.};
     float white[4] = {0., 0., 0., 1.};
+
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHT1);
+
     glLightfv(GL_LIGHT0, GL_AMBIENT, grey);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, white);
     glLightfv(GL_LIGHT0, GL_SPECULAR, white);
@@ -1042,20 +1178,32 @@ void initialize(void) {
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_NORMALIZE);
+
     gluQuadricDrawStyle(q, GLU_FILL);
 	glClearColor (0.0, 0.0, 0.0, 0.0);
+
     glMatrixMode (GL_PROJECTION);
     glLoadIdentity ();
     gluPerspective(60., 1.0, 10.0, 5000.0);     //Perspective projection
+
     glMaterialfv(GL_FRONT, GL_SPECULAR, white);
     glMaterialf(GL_FRONT, GL_SHININESS, 50);
     loadTexture();
+
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
     glEnable(GL_COLOR_MATERIAL);
     glColor4f(0., 0., 1., 1.);
+
+    //initialize snowfall
+    for (loop=0; loop<TOTAL_SNOW; loop++) {
+        init_snowfall(loop);
+    }
 }
 
+/**
+ * @brief display - Display method for project
+ */
 void display(void) {
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
@@ -1070,6 +1218,7 @@ void display(void) {
 
     skybox();
     castle();
+    draw_snow();
 
     int checker = 1;
     int r_timer = 0;
@@ -1085,7 +1234,7 @@ void display(void) {
         checker = 0;
         robot_walking(checker);
     }
-    if (checker = 0) {
+    if (checker == 0) {
         r_timer++;
         if (r_timer == 5) {
             checker = 1;
@@ -1121,6 +1270,12 @@ void display(void) {
     glutSwapBuffers();
 }
 
+/**
+ * @brief main - Main function to launch project
+ * @param argc
+ * @param argv
+ * @return
+ */
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB |GLUT_DEPTH);
