@@ -22,7 +22,7 @@ int loop;
 int is_snowing = 1;
 float decrease_speed = 2.0;
 float velocity = 0.0;
-float zoom = -40.0;
+float z_change = -40.0;
 
 int water_drops = 0;
 int create_curtain = 0;
@@ -303,21 +303,17 @@ void draw_snow() {
     float x, y, z;
     for (loop = 0; loop < TOTAL_SNOW; loop=loop+2) {
         if (snowfall[loop].alive == true && is_snowing == 1) {
-            x = snowfall[loop].x_pos;
-            y = snowfall[loop].y_pos;
-            z = snowfall[loop].z_pos + zoom;
-
             // snow at castle front
             glPushMatrix();
                 glColor3f(1.0, 1.0, 1.0);
-                glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, snowfall[loop].z_pos+zoom);
+                glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, snowfall[loop].z_pos+z_change);
                 glutSolidSphere(1, 16, 16);
             glPopMatrix();
 
             // snow at castle back
             glPushMatrix();
                 glColor3f(1.0, 1.0, 1.0);
-                glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, -(snowfall[loop].z_pos+zoom));
+                glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, -(snowfall[loop].z_pos+z_change));
                 glutSolidSphere(1, 16, 16);
             glPopMatrix();
 
@@ -329,7 +325,7 @@ void draw_snow() {
             } else {
                 snowfall[loop].lifespan = 0;
             }
-            // loop snowfall
+            // restart snowfall if lifespan is up
             if (snowfall[loop].lifespan <= float(0)) {
                 init_snowfall(loop);
             }
