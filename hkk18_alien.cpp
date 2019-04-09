@@ -19,6 +19,7 @@ int check = 0;
 int robots_move = 0;
 
 int loop;
+int is_snowing = 0;
 float decrease_speed = 2.0;
 float velocity = 0.0;
 float zoom = -40.0;
@@ -257,83 +258,6 @@ void robot_timer(int time) {
 	glutTimerFunc(20, robot_timer, 0);
 }
 
-/**
- * @brief glut_key_pressed - special function to recognize keys pressed
- * @param key - the key that was pressed
- * @param x - for glutSpecialFunc
- * @param y - for glutSpecialFunc
- */
-void glut_key_pressed(int key, int x, int y) {
-    if(key == GLUT_KEY_UP) {
-        cam_height--;
-    } else if(key == GLUT_KEY_DOWN) {
-        cam_height++;
-    } else if(key == GLUT_KEY_RIGHT) {
-        angle_left_right--;
-    } else if(key == GLUT_KEY_LEFT) {
-        angle_left_right++;
-    } else if (key == GLUT_KEY_HOME) {
-        if (toggle == 0) {
-            if (cam_height <= 500 && spaceship_move_y < 100) {
-                cam_height += spaceship_move_y;
-            } else {
-                cam_height = 500;
-            }
-            angle_left_right = 0;
-            angle_up_down = 80;
-            toggle = 1;
-        } else if (toggle == 1) {
-            cam_height = 300;
-            angle_left_right = 0;
-            angle_up_down = 1.0;
-            toggle = 0;
-        }
-    }
-    glutPostRedisplay();
-}
-
-/**
- * @brief key_pressed - recognized ASCII keys pressed
- * @param key - key that was pressed
- * @param x - for glutKeyboardFunc
- * @param y - for glutKeyboardFunc
- */
-void key_pressed(unsigned char key, int x, int y) {
-    if (key == 'c' || key == 'C') {
-        if (bullet_fire == 0) {
-            bullet_fire = 1;
-            glutTimerFunc(20, bullet_timer, 0);
-        }
-    } else if (key == 's' || key == 'S') {
-        if (launch == 0 && spaceship_move == 0) {
-            launch = 1;
-            spaceship_move = 1;
-            if (restart_launch == 0) {
-                glutTimerFunc(20, spaceship_timer, 0);
-            }
-        }
-    } else if (key == 'x' || key == 'X') {
-        angle_up_down++;
-    } else if (key == 'z' || key == 'Z') {
-        angle_up_down--;
-    } else if (key == 'w' || key == 'W') {
-        if (create_curtain == 0) {
-            create_curtain = 1;
-        } else {
-            create_curtain = 0;
-        }
-    } else if (key == 'r' || key == 'R') {
-        if (launch == 1 && spaceship_move == 1) {
-            launch = 0;
-            spaceship_move_y = 0;
-            spaceship_move = 0;
-            restart_launch = 1;
-        }
-    }
-    glutPostRedisplay();
-}
-
-
 /// Waterfall Sprinkler Structure (Particle System)
 typedef struct {
     int sprinkle;
@@ -370,7 +294,7 @@ void init_snowfall(int i) {
     snowfall[i].decay = float(rand() % 100) / 1000;
 
     snowfall[i].x_pos = float(rand() % 1000) - 10;
-    snowfall[i].y_pos = float(rand() % 1000) - 10;
+    snowfall[i].y_pos = float(rand() % 1000);
     snowfall[i].z_pos = float(rand() % 1000) - 10;
 }
 
@@ -378,48 +302,47 @@ void init_snowfall(int i) {
  * @brief draw_snow - Displays snowfall
  */
 void draw_snow() {
-  float x, y, z;
-  for (loop = 0; loop < TOTAL_SNOW; loop=loop+2) {
-    if (snowfall[loop].alive == true) {
-      x = snowfall[loop].x_pos;
-      y = snowfall[loop].y_pos;
-      z = snowfall[loop].z_pos + zoom;
+    float x, y, z;
+    for (loop = 0; loop < TOTAL_SNOW; loop=loop+2) {
+        if (snowfall[loop].alive == true && is_snowing == 1) {
+            x = snowfall[loop].x_pos;
+            y = snowfall[loop].y_pos;
+            z = snowfall[loop].z_pos + zoom;
 
-      // snow at castle front
-      glPushMatrix();
-          glColor3f(1.0, 1.0, 1.0);
-          glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, snowfall[loop].z_pos+zoom);
-          glutSolidSphere(1, 16, 16);
-      glPopMatrix();
+            // snow at castle front
+            glPushMatrix();
+                glColor3f(1.0, 1.0, 1.0);
+                glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, snowfall[loop].z_pos+zoom);
+                glutSolidSphere(1, 16, 16);
+            glPopMatrix();
 
-      // snow at castle back
-      glPushMatrix();
-          glColor3f(1.0, 1.0, 1.0);
-          glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, -(snowfall[loop].z_pos+zoom));
-          glutSolidSphere(1, 16, 16);
-      glPopMatrix();
+            // snow at castle back
+            glPushMatrix();
+                glColor3f(1.0, 1.0, 1.0);
+                glTranslatef(snowfall[loop].x_pos-500, snowfall[loop].y_pos, -(snowfall[loop].z_pos+zoom));
+                glutSolidSphere(1, 16, 16);
+            glPopMatrix();
 
-      // animate snow using physics of velocity and gravity
-      if ((snowfall[loop].y_pos + (velocity / (decrease_speed * 1000))) > 10) {
-          snowfall[loop].y_pos += velocity / (decrease_speed * 1000);
-          velocity += GRAVITY;
-          snowfall[loop].lifespan -= snowfall[loop].decay;
-      } else {
-          snowfall[loop].lifespan = 0;
-      }
-
-      // loop snowfall
-      if (snowfall[loop].lifespan <= 0.0) {
-        init_snowfall(loop);
-      }
+            // animate snow using physics of velocity and gravity
+            if ((snowfall[loop].y_pos + (velocity / (decrease_speed * 1000))) > 0) {
+                snowfall[loop].y_pos += velocity / (decrease_speed * 1000);
+                velocity += GRAVITY;
+                snowfall[loop].lifespan -= snowfall[loop].decay;
+            } else {
+                snowfall[loop].lifespan = 0;
+            }
+            // loop snowfall
+            if (snowfall[loop].lifespan <= 0.0) {
+                init_snowfall(loop);
+            }
+        }
     }
-  }
 }
 
 /**
- * @brief time_step - function to animate sprinkler
+ * @brief sprinkle_time - function to animate sprinkler
  */
-void time_step(void) {
+void sprinkle_time(void) {
     int i;
     for (i=0; i<water_drops; i++) {
         if (sprinkler[i].sprinkle) {
@@ -525,7 +448,7 @@ void hydrant_base(void) {
         glScalef(20, 20, 20);
         drop_generator();
         draw_sprinkler();
-        time_step();
+        sprinkle_time();
     glPopMatrix();
 
     // right sprinkler
@@ -535,7 +458,7 @@ void hydrant_base(void) {
         glRotatef(-180.0, 0., 1., 0.);
         drop_generator();
         draw_sprinkler();
-        time_step();
+        sprinkle_time();
     glPopMatrix();
 }
 
@@ -1157,6 +1080,90 @@ void robot_walking(int check) {
 }
 
 /**
+ * @brief glut_key_pressed - special function to recognize keys pressed
+ * @param key - the key that was pressed
+ * @param x - for glutSpecialFunc
+ * @param y - for glutSpecialFunc
+ */
+void glut_key_pressed(int key, int x, int y) {
+    if(key == GLUT_KEY_UP) { // pan camera in
+        cam_height--;
+    } else if(key == GLUT_KEY_DOWN) { // pan camera out
+        cam_height++;
+    } else if(key == GLUT_KEY_RIGHT) { // turn camera right
+        angle_left_right--;
+    } else if(key == GLUT_KEY_LEFT) { // turn camera left
+        angle_left_right++;
+    } else if (key == GLUT_KEY_HOME) { // toggle camera view
+        if (toggle == 0) {
+            if (cam_height <= 500 && spaceship_move_y < 100) {
+                cam_height += spaceship_move_y;
+            } else {
+                cam_height = 500;
+            }
+            angle_left_right = 0;
+            angle_up_down = 80;
+            toggle = 1;
+        } else if (toggle == 1) {
+            cam_height = 300;
+            angle_left_right = 0;
+            angle_up_down = 1.0;
+            toggle = 0;
+        }
+    }
+    glutPostRedisplay();
+}
+
+/**
+ * @brief key_pressed - recognized ASCII keys pressed
+ * @param key - key that was pressed
+ * @param x - for glutKeyboardFunc
+ * @param y - for glutKeyboardFunc
+ */
+void key_pressed(unsigned char key, int x, int y) {
+    if (key == 'c' || key == 'C') { // fire cannon
+        if (bullet_fire == 0) {
+            bullet_fire = 1;
+            glutTimerFunc(20, bullet_timer, 0);
+        }
+    } else if (key == 'l' || key == 'L') { // launch spaceship
+        if (launch == 0 && spaceship_move == 0) {
+            launch = 1;
+            spaceship_move = 1;
+            if (restart_launch == 0) {
+                glutTimerFunc(20, spaceship_timer, 0);
+            }
+        }
+    } else if (key == 'x' || key == 'X') { // angle camera up
+        angle_up_down++;
+    } else if (key == 'z' || key == 'Z') { // angle camera down
+        angle_up_down--;
+    } else if (key == 'w' || key == 'W') { // toggle waterfall curtain
+        if (create_curtain == 0) {
+            create_curtain = 1;
+        } else {
+            create_curtain = 0;
+        }
+    } else if (key == 'r' || key == 'R') { // repeat spaceship launch
+        if (launch == 1 && spaceship_move == 1) {
+            launch = 0;
+            spaceship_move_y = 0;
+            spaceship_move = 0;
+            restart_launch = 1;
+        }
+    } else if (key == 's' || key == 'S') { // toggle snowfall
+        if (is_snowing == 0) {
+            is_snowing = 1;
+        } else {
+            is_snowing = 0;
+        }
+    } else if (key == 27) { // quit
+        exit(0);
+    }
+    glutPostRedisplay();
+}
+
+/**
  * @brief initialize - Init method for project
  */
 void initialize(void) {
@@ -1195,7 +1202,6 @@ void initialize(void) {
     glEnable(GL_COLOR_MATERIAL);
     glColor4f(0., 0., 1., 1.);
 
-    //initialize snowfall
     for (loop=0; loop<TOTAL_SNOW; loop++) {
         init_snowfall(loop);
     }
