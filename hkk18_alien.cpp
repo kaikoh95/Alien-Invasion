@@ -9,7 +9,7 @@
 using namespace std;
 
 #define TOTAL_DROPLETS 1000000
-#define TOTAL_SNOW 10000
+#define TOTAL_SNOW 500
 #define GRAVITY -0.1
 
 GLUquadric *q;
@@ -19,7 +19,7 @@ int check = 0;
 int robots_move = 0;
 
 int loop;
-int is_snowing = 0;
+int is_snowing = 1;
 float decrease_speed = 2.0;
 float velocity = 0.0;
 float zoom = -40.0;
@@ -265,7 +265,6 @@ typedef struct {
     float x_change, y_change;
     float mass;
 } Particle;
-
 Particle sprinkler[TOTAL_DROPLETS];
 
 /// Snowfall (Particle System)
@@ -281,7 +280,6 @@ typedef struct {
     float velocity;
     float gravity;
 } Snow;
-
 Snow snowfall[TOTAL_SNOW];
 
 /**
@@ -290,7 +288,7 @@ Snow snowfall[TOTAL_SNOW];
  */
 void init_snowfall(int i) {
     snowfall[i].alive = true;
-    snowfall[i].lifespan = 1.0;
+    snowfall[i].lifespan = float(1);
     snowfall[i].decay = float(rand() % 100) / 1000;
 
     snowfall[i].x_pos = float(rand() % 1000) - 10;
@@ -324,15 +322,15 @@ void draw_snow() {
             glPopMatrix();
 
             // animate snow using physics of velocity and gravity
-            if ((snowfall[loop].y_pos + (velocity / (decrease_speed * 1000))) > 0) {
-                snowfall[loop].y_pos += velocity / (decrease_speed * 1000);
-                velocity += GRAVITY;
+            if ((snowfall[loop].y_pos + (velocity / (decrease_speed * 100))) > 0) {
+                snowfall[loop].y_pos += velocity / (decrease_speed * 100);
+                velocity += float(GRAVITY);
                 snowfall[loop].lifespan -= snowfall[loop].decay;
             } else {
                 snowfall[loop].lifespan = 0;
             }
             // loop snowfall
-            if (snowfall[loop].lifespan <= 0.0) {
+            if (snowfall[loop].lifespan <= float(0)) {
                 init_snowfall(loop);
             }
         }
@@ -347,17 +345,17 @@ void sprinkle_time(void) {
     for (i=0; i<water_drops; i++) {
         if (sprinkler[i].sprinkle) {
             // physics of gravity
-            if (sprinkler[i].y_coord + GRAVITY * sprinkler[i].mass < -0.75 && create_curtain == 1) {
+            if (sprinkler[i].y_coord + float(GRAVITY) * sprinkler[i].mass < float(-0.75) && create_curtain == 1) {
                 // create waterfall curtain
                 sprinkler[i].y_change = -sprinkler[i].y_change;
             }
             else {
                 // just sprinkle on to ground
-                sprinkler[i].y_change += GRAVITY * sprinkler[i].mass;
+                sprinkler[i].y_change += float(GRAVITY) * sprinkler[i].mass;
             }
             sprinkler[i].x_coord += sprinkler[i].x_change;
             sprinkler[i].y_coord += sprinkler[i].y_change;
-            if (sprinkler[i].y_coord < -1.0 || sprinkler[i].x_coord > 1.0) {
+            if (sprinkler[i].y_coord < float(-1) || sprinkler[i].x_coord > float(1)) {
                 sprinkler[i].sprinkle = 0;
             }
         }
@@ -369,18 +367,19 @@ void sprinkle_time(void) {
  */
 void drop_generator(void) {
     int i;
-    float new_droplets = randomize() * 100;
+    float new_droplets = float(randomize() * 100);
     if (water_drops + new_droplets >= TOTAL_DROPLETS) {
         new_droplets = TOTAL_DROPLETS - water_drops;
     }
     for (i=water_drops; i<water_drops+new_droplets; i++) {
         sprinkler[i].sprinkle = 1;
-        sprinkler[i].x_coord = -0.8 + 0.01 * randomize();
-        sprinkler[i].y_coord = 0.8 + 0.01 * randomize();
-        sprinkler[i].x_change = 0.0075 + 0.0025 * randomize();
+        sprinkler[i].x_coord = float(-0.8 + 0.01 * randomize());
+        sprinkler[i].y_coord = float(0.8 + 0.01 * randomize());
+        sprinkler[i].x_change = float(0.0075 + 0.0025 * randomize());
         sprinkler[i].y_change = 0.0;
-        sprinkler[i].mass = 0.5 + 0.5 * randomize();
+        sprinkler[i].mass = float(0.5 + 0.5 * randomize());
     }
+    i = water_drops;
     water_drops += new_droplets;
 }
 
@@ -389,7 +388,7 @@ void drop_generator(void) {
  */
 void draw_sprinkler(void) {
     int i;
-    glColor3f(0, 0.4, 1);
+    glColor3f(0, float(0.4), 1);
     glBegin(GL_POINTS);
     for (i=0; i<water_drops; i++) {
         if (sprinkler[i].sprinkle) {
@@ -406,7 +405,7 @@ void draw_sprinkler(void) {
 void hydrant_base(void) {
     // left body
     glPushMatrix();
-        glColor4f(0.4, 0, 0.1, 0);
+        glColor4f(float(0.4), 0, float(0.1), 0);
         glTranslatef(-82, 42, -20);
         glTranslatef(0,-13,0);
         glScalef(5,25,5);
@@ -415,7 +414,7 @@ void hydrant_base(void) {
 
     // right body
     glPushMatrix();
-        glColor4f(0.4, 0, 0.1, 0);
+        glColor4f(float(0.4), 0, float(0.1), 0);
         glTranslatef(23, 42, -20);
         glTranslatef(0,-13,0);
         glScalef(5,25,5);
@@ -717,7 +716,7 @@ void castle_back(void) {
  */
 void castle(void) {
     glPushMatrix();
-        glColor3f(0.2, 0.2, 0.2);
+        glColor3f(float(0.2), float(0.2), float(0.2));
         glTranslatef(-30, 50, 1.5);
         glRotatef(90, 90, 0, 0);
         GLUquadric *q = gluNewQuadric();
@@ -725,14 +724,14 @@ void castle(void) {
     glPopMatrix();
 
     glPushMatrix();
-        glColor3f(0.2, 0.2, 0.2);
-        glTranslatef(30, 50, 2.7);
+        glColor3f(float(0.2), float(0.2), float(0.2));
+        glTranslatef(30, 50, float(2.7));
         glRotatef(90, 90, 0, 0);
         gluCylinder(q, 12.0, 12.0, 50, 25, 5);
     glPopMatrix();
 
     glPushMatrix();
-        glColor3f(1., 0., 0.);
+        glColor3f(1, 0, 0);
         glTranslatef(-29.5, 50, 2);
         glRotatef(-90,1,0,0);
         glScalef(5, 5, 20);
@@ -740,7 +739,7 @@ void castle(void) {
     glPopMatrix();
 
 	glPushMatrix();
-        glColor3f(1., 0., 0.);
+        glColor3f(1, 0, 0);
         glTranslatef(29.5, 50, 3);
         glRotatef(-90,1,0,0);
         glScalef(5, 5, 20);
@@ -748,7 +747,7 @@ void castle(void) {
 	glPopMatrix();
 
     glPushMatrix();
-        glColor3f(0.2, 0.2, 0.2);
+        glColor3f(float(0.5), float(0.5), float(0.5));
         glTranslatef(0,38,0);
         glRotatef(0,1,0,0);
         glScalef(60, 15, 20);
@@ -812,17 +811,17 @@ void spaceship(void) {
     // top - surface shape generated using an equation
     GLdouble eqn [4]={0.0,1.0,0.0,0.0}; 
     glPushMatrix();
-        glColor3f(0, 0, 0.4);
-        glTranslatef(0,60,-30);
-        glClipPlane(GL_CLIP_PLANE0,eqn);
+        glColor3f(0, 0, float(0.4));
+        glTranslatef(0, 60, -30);
+        glClipPlane(GL_CLIP_PLANE0, eqn);
         glEnable(GL_CLIP_PLANE0);
-        gluSphere(q, 5.3f, 32, 32);
+        gluSphere(q, double(5.3), 32, 32);
         glDisable(GL_CLIP_PLANE0);
     glPopMatrix();
     
     // middle
     glPushMatrix();
-        glColor4f(0.6, 0.6, 0.6, 1.0);
+        glColor4f(float(0.6), float(0.6), float(0.6), 1.0);
         glTranslatef(0,60,-30);
         glRotatef(90,1,0,0);
         GLUquadric *b = gluNewQuadric();
@@ -840,7 +839,7 @@ void spaceship(void) {
         gluQuadricDrawStyle(q, GLU_FILL);
         glColor4f(0, 255, 0, 1.0);
         glTranslatef(0, 7, -30);
-        glRotatef(-robots_move-10.5,0,1,0);
+        glRotatef(-robots_move-float(10.5),0,1,0);
         glutSolidCube(4);
         glTranslatef(10, 0, -10);
         glRotatef(-robots_move-20,0,1,0);
@@ -854,7 +853,7 @@ void spaceship(void) {
 void cannon(void) {
     // base of cannon
     glPushMatrix();
-        glColor4f(0.2, 0.3, 0.3, 0);
+        glColor4f(float(0.2), float(0.3), float(0.3), 0);
         glTranslatef(-25, 3.0, 20);
         glScalef(10.0, -5.0, 10.0);
         glutSolidCube(1.0);
@@ -862,7 +861,7 @@ void cannon(void) {
 
     // torso of cannon
     glPushMatrix();
-        glColor4f(0.4, 0.26, 0.12, 0);
+        glColor4f(float(0.4), float(0.26), float(0.12), 0);
         glTranslatef(-15, 10, 20.0);
         glRotatef(-90.0, 0, 1, 0);
         gluCylinder(q, 7.0, 5.0, 30.0, 25, 5);
@@ -897,10 +896,10 @@ void robot(int regular) {
     if (regular == 1) {
         glColor3f(255, 0, 0);
     } else {
-        glColor4f(0.2,0.2,0.2,1.0);
+        glColor4f(float(0.2), float(0.2), float(0.2), float(1.0));
     }
     glPushMatrix();
-        glTranslatef(0, 6.7, 0);
+        glTranslatef(0, float(6.7), 0);
         glutSolidCube(1.4);
     glPopMatrix();
 
@@ -909,13 +908,13 @@ void robot(int regular) {
         glColor3f(0, 50, 100);
     }
     glPushMatrix();
-        glTranslatef(-0.3, 7, 0.7);
+        glTranslatef(float(-0.3), 7, float(0.7));
         glutSolidCube(.2);
-        glTranslatef(0.6, 0, 0);
+        glTranslatef(float(0.6), 0, 0);
         glutSolidCube(.2);
-        glTranslatef(-0.3, -0.3, 0);
+        glTranslatef(float(-0.3), float(-0.3), 0);
         glutSolidCube(.2);
-        glTranslatef(0, -0.3, 0);
+        glTranslatef(0, float(-0.3), 0);
         glScalef(3, .5, 1);
         glutSolidCube(.2);
     glPopMatrix();
@@ -926,7 +925,7 @@ void robot(int regular) {
     }
     glPushMatrix();
         glTranslatef(0, 4.5, 0);
-        glScalef(3, 3, 1.2);
+        glScalef(3, 3, float(1.2));
         glutSolidCube(1);
     glPopMatrix();
 
@@ -937,7 +936,7 @@ void robot(int regular) {
     glPushMatrix();
         glTranslatef(0, 4.5, 0);
         glRotatef(-theta, 1, 0, 0);
-        glTranslatef(-0.8, -3, 0);
+        glTranslatef(float(-0.8), -3, 0);
         glScalef(1, 4, 1);
         glutSolidCube(1);
     glPopMatrix();
@@ -945,7 +944,7 @@ void robot(int regular) {
     glPushMatrix();
         glTranslatef(0, 4.5, 0);
         glRotatef(theta, 1, 0, 0);
-        glTranslatef(0.8, -3, 0);
+        glTranslatef(float(0.8), -3, 0);
         glScalef(1, 4, 1);
         glutSolidCube(1);
     glPopMatrix();
@@ -956,7 +955,7 @@ void robot(int regular) {
     }
     glPushMatrix();
         glTranslatef(0, 2, 0);
-        glTranslatef(-0.8, -2.5, 0);
+        glTranslatef(float(-0.8), float(-2.5), 0);
         glRotatef(90, 1, 0, 0);
         glScalef(1, 4, 1);
         glutSolidCube(1);
@@ -994,29 +993,30 @@ void robot(int regular) {
  * @brief robot_shadow - creates shadow of robots
  */
 void robot_shadow(void) {
-    float shadowMatrix[16] = {
-        light_position[1],0,0,0,
-        -light_position[0],0,
-        -light_position[2],-1,0,0,
-        light_position[1],0,0,0,0,
+    float shadowMatrix[16] =
+    {
+        light_position[1], 0 ,0, 0,
+        -light_position[0], 0,
+        -light_position[2], -1, 0, 0,
+        light_position[1], 0, 0, 0, 0,
         light_position[1]
     };
     glDisable(GL_LIGHTING);
 
     glPushMatrix();
         glMultMatrixf(shadowMatrix);
-        glColor4f(0.6,0.6,0.6,1.0);
+        glColor4f(float(0.6), float(0.6), float(0.6), float(1.0));
         glTranslatef(0, 10, 20);
-        glRotatef(90,0,1,0);
-        glScalef(2,2,2);
+        glRotatef(90, 0, 1, 0);
+        glScalef(2, 2, 2);
         robot(0);
     glPopMatrix();
 
     glEnable(GL_LIGHTING);
     glPushMatrix();
-        glTranslatef(0,0,20);
-        glRotatef(90,0,1,0);
-        glScalef(2,2,2);
+        glTranslatef(0, 0, 20);
+        glRotatef(90 ,0, 1 ,0);
+        glScalef(2, 2, 2);
         robot(1);
     glPopMatrix();
 }
@@ -1030,49 +1030,49 @@ void robot_walking(int check) {
     if (check == 1) {
         glPushMatrix();
             glTranslatef(0,3,-50);
-            glRotatef(-robots_move-10.5,0,1,0);
+            glRotatef(-robots_move-float(10.5), 0, 1, 0);
             glTranslatef(0,0,-160);
             robot_shadow();
         glPopMatrix();
 
         glPushMatrix();
             glTranslatef(0,3,-50);
-            glRotatef(-robots_move-10.5*5,0,1,0);
+            glRotatef(-robots_move-float(10.5*5), 0, 1, 0);
             glTranslatef(0,0,-160);
             robot_shadow();
         glPopMatrix();
 
         glPushMatrix();
             glTranslatef(0,3,-50);
-            glRotatef(-robots_move-10.5*10,0,1,0);
+            glRotatef(-robots_move-float(10.5*10), 0, 1, 0);
             glTranslatef(0,0,-160);
             robot_shadow();
         glPopMatrix();
 
         glPushMatrix();
             glTranslatef(0,3,-50);
-            glRotatef(-robots_move-10.5*15,0,1,0);
+            glRotatef(-robots_move-float(10.5*15), 0, 1, 0);
             glTranslatef(0,0,-160);
             robot_shadow();
         glPopMatrix();
 
         glPushMatrix();
             glTranslatef(0,3,-50);
-            glRotatef(-robots_move-10.5*20,0,1,0);
+            glRotatef(-robots_move-float(10.5*20), 0, 1, 0);
             glTranslatef(0,0,-160);
             robot_shadow();
         glPopMatrix();
 
         glPushMatrix();
             glTranslatef(0,3,-50);
-            glRotatef(-robots_move-10.5*25, 0,1,0);
+            glRotatef(-robots_move-float(10.5*25), 0, 1, 0);
             glTranslatef(0,0,-160);
             robot_shadow();
         glPopMatrix();
 
         glPushMatrix();
             glTranslatef(0,3,-50);
-            glRotatef(-robots_move-10.5*30,0,1,0);
+            glRotatef(-robots_move-float(10.5*30), 0, 1, 0);
             glTranslatef(0,0,-160);
             robot_shadow();
         glPopMatrix();
@@ -1139,6 +1139,7 @@ void key_pressed(unsigned char key, int x, int y) {
     } else if (key == 'z' || key == 'Z') { // angle camera down
         angle_up_down--;
     } else if (key == 'w' || key == 'W') { // toggle waterfall curtain
+        water_drops = 0;
         if (create_curtain == 0) {
             create_curtain = 1;
         } else {
@@ -1152,6 +1153,7 @@ void key_pressed(unsigned char key, int x, int y) {
             restart_launch = 1;
         }
     } else if (key == 's' || key == 'S') { // toggle snowfall
+        velocity = 0;
         if (is_snowing == 0) {
             is_snowing = 1;
         } else {
@@ -1167,8 +1169,8 @@ void key_pressed(unsigned char key, int x, int y) {
  * @brief initialize - Init method for project
  */
 void initialize(void) {
-    float grey[4] = {0.4, 0.4, 0.4, 1.};
-    float white[4] = {0., 0., 0., 1.};
+    float grey[4] = {float(0.4), float(0.4), float(0.4), 1};
+    float white[4] = {0, 0, 0, 1};
 
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -1205,6 +1207,7 @@ void initialize(void) {
     for (loop=0; loop<TOTAL_SNOW; loop++) {
         init_snowfall(loop);
     }
+    loop = 0;
 }
 
 /**
